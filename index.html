@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1a0b2e">
+  <meta name="description" content="A little surprise, wrapped in flowers.">
+  <title>Happy 2nd Monthsary</title>
+
+  <!-- Google Fonts are optional: every font-family in style.css has a full local fallback stack,
+       so the page still looks right when opened offline from a double-clicked index.html.
+       Loaded with media="print" + onload so a slow or black-holed fonts.googleapis.com can
+       never block first paint or delay script.js. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&family=Great+Vibes&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&family=Great+Vibes&display=swap" rel="stylesheet"></noscript>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-phase="landing">
+
+  <!-- ===== Background: gradient layers, drifting colour blobs (transform only), warm finale light ===== -->
+  <div class="bg" aria-hidden="true">
+    <div class="bg-layer bg-cool"></div>
+    <div class="bg-layer bg-warm"></div>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="gold-light"></div>
+    <div class="pulse" id="pulse"></div>
+    <div class="bloom" id="bloom"></div>
+  </div>
+  <canvas id="bgCanvas" class="layer-canvas" aria-hidden="true"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <canvas id="fxCanvas" class="layer-canvas" aria-hidden="true"></canvas>
+
+  <!-- ===== Sound toggle (visible from the landing onward) + hint when audio is still locked ===== -->
+  <button id="muteBtn" class="mute" type="button" aria-label="Mute sound" aria-pressed="false" title="Sound on / off (M)">
+    <span class="mute-icon" id="muteIcon" aria-hidden="true">🔊</span>
+  </button>
+  <p class="sound-hint" id="soundHint" aria-hidden="true">tap anywhere for sound</p>
+  <div id="srStatus" class="sr-only" aria-live="polite"></div>
+
+  <main id="stage" class="stage">
+
+    <!-- ===== Phase 1 & 2: Landing + the button ===== -->
+    <section id="landing" class="phase phase-landing is-active" aria-label="Welcome">
+      <div class="tilt" id="tilt">
+        <div class="title-wrap">
+          <h1 class="title" id="title">
+            <span class="title-glow" id="titleGlow" aria-hidden="true"></span>
+            <span class="title-text" id="titleText"></span>
+          </h1>
+          <p class="accent" id="accent"><span class="accent-text" id="accentText"></span></p>
+        </div>
+        <div class="subtitle-wrap">
+          <p class="subtitle" id="subtitle"></p>
+        </div>
+        <div class="cta-wrap">
+          <button id="openBtn" class="btn3d" type="button">
+            <span class="btn-depth" aria-hidden="true"></span>
+            <span class="btn-face">
+              <span class="btn-icon" aria-hidden="true">💌</span>
+              <span class="btn-label" id="btnLabel">Click or open this</span>
+              <span class="btn-shimmer" aria-hidden="true"></span>
+            </span>
+          </button>
+          <p class="cta-hint" id="ctaHint" aria-hidden="true"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Phase 3: Countdown ===== -->
+    <section id="countdown" class="phase phase-countdown" aria-label="Countdown">
+      <div class="count-wrap">
+        <div class="aura aura-1" id="aura1"></div>
+        <div class="aura aura-2" id="aura2"></div>
+        <div class="aura-ring" id="auraRing"></div>
+        <div class="count-num" id="countNum" aria-live="polite" aria-atomic="true"></div>
+        <p class="count-caption" id="countCaption"></p>
+      </div>
+    </section>
+
+    <!-- ===== Phase 4: Finale — burst, notes, envelope, card, replay ===== -->
+    <section id="finale" class="phase phase-finale" aria-label="A message for you">
+      <div class="notes" id="notes" aria-hidden="true"></div>
+
+      <!-- The couple, standing around their letter. Every figure in here is
+           positioned in pixels from the card's MEASURED box, so the layer is
+           empty (and invisible) whenever the screen leaves no room beside the
+           letter. It sits below .card-scene in the stacking order, so even a
+           mis-measured figure could only ever be painted behind the card. -->
+      <div class="sticker-layer" id="stickerLayer" aria-hidden="true"></div>
+
+      <div class="envelope" id="envelope" aria-hidden="true">
+        <div class="env-back"></div>
+        <div class="env-letter"><span class="env-letter-heart">♥</span></div>
+        <div class="env-pocket"></div>
+        <div class="env-flap"><span class="env-seal">♥</span></div>
+      </div>
+
+      <div class="card-scene" id="cardScene">
+        <article class="card" id="card" tabindex="-1" aria-label="Love letter">
+          <div class="card-edge" aria-hidden="true"></div>
+          <div class="card-shine" aria-hidden="true"></div>
+          <div class="card-scroll" id="cardScroll">
+            <div class="card-ornament card-line" aria-hidden="true"><span></span><i>❦</i><span></span></div>
+            <h2 class="card-heading card-line" id="cardHeading"></h2>
+            <div class="card-body" id="cardBody"></div>
+            <p class="card-closing card-line" id="cardClosing"></p>
+            <p class="card-signature card-line" id="cardSignature"></p>
+            <!-- Where the couple stand when the screen leaves no room beside
+                 the letter: a little keepsake strip at the very end of it,
+                 after the sign-off, scrolling with the words. Filled by JS and
+                 left hidden (display:none) whenever every figure fits outside,
+                 so the letter's own layout is untouched. -->
+            <figure class="keepsake" id="keepsake" hidden>
+              <div class="keepsake-rule" aria-hidden="true"><span></span><i>♥</i><span></span></div>
+              <div class="keepsake-row" id="keepsakeRow"></div>
+              <figcaption class="keepsake-cap" id="keepsakeCap"></figcaption>
+            </figure>
+          </div>
+          <div class="card-more" aria-hidden="true"></div>
+        </article>
+      </div>
+
+      <button id="replayBtn" class="replay" type="button">
+        <span class="replay-label">Replay</span><span class="replay-icon" aria-hidden="true">✨</span>
+      </button>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

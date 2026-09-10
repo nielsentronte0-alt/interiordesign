@@ -1,0 +1,929 @@
+/* =====================================================================
+   Happy 2nd Monthsary — style.css
+   Sections: tokens · reset · background · layout/phases · landing ·
+             button · countdown · finale (envelope, card, notes, replay) ·
+             mute & hint · settle points · reduced motion · responsive
+   Motion rules: DOM animations use only transform / opacity; the only
+   blur is a static blur on the small title-glow copy; the background
+   blobs are plain radial gradients moved with transform.
+   ===================================================================== */
+
+/* ---------- Design tokens ---------- */
+:root {
+  --purple-1: #1a0b2e;
+  --purple-2: #2d0f4a;
+  --purple-3: #3b0f5c;
+  --pink-1: #ff2d95;
+  --pink-2: #ff5fa2;
+  --pink-3: #ff8fc8;
+  --red: #ff2d55;
+  --gold-1: #ffd166;
+  --gold-2: #f5c26b;
+  --cyan: #7df9ff;
+  --violet: #c77dff;
+  --ink: #fff5fa;
+  --ink-soft: rgba(255, 245, 250, 0.76);
+  --ink-dim: rgba(255, 245, 250, 0.5);
+
+  --font-display: 'Playfair Display', 'Didot', 'Bodoni MT', Georgia, 'Times New Roman', serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-letter: 'Cormorant Garamond', 'Playfair Display', Garamond, Georgia, 'Times New Roman', serif;
+  --font-script: 'Great Vibes', 'Brush Script MT', 'Segoe Script', 'Snell Roundhand', 'Apple Chancery', cursive;
+
+  --t-phase: 2.3s;               /* phase crossfade duration */
+  --t-delay: 0s;                 /* entrance delay for the incoming phase */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.22, 1.2, 0.3, 1);
+  --count-col: #ffd166;          /* countdown colour, set by JS each tick */
+  --pulse-col: rgba(255, 209, 102, 0.9);
+  --pulse-max: 0.25;
+}
+
+/* Lets --count-col crossfade smoothly between ticks (progressive enhancement) */
+@property --count-col {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #ffd166;
+}
+
+/* ---------- Reset ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
+body {
+  margin: 0;
+  background: var(--purple-1);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus { outline: none; }
+button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }
+::selection { background: rgba(255, 45, 149, 0.4); }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- Background ---------- */
+.bg {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden;
+  background: var(--purple-1);
+}
+.bg-layer {
+  position: absolute; inset: -6%;
+  transition: opacity 2.6s ease;
+  will-change: opacity, transform;
+}
+.bg-cool {
+  opacity: 1;
+  background:
+    radial-gradient(60% 70% at 20% 20%, rgba(199, 125, 255, 0.28), transparent 60%),
+    radial-gradient(55% 65% at 80% 30%, rgba(255, 45, 149, 0.22), transparent 60%),
+    radial-gradient(70% 60% at 50% 100%, rgba(125, 249, 255, 0.10), transparent 60%),
+    linear-gradient(160deg, #1a0b2e 0%, #2d0f4a 45%, #3b0f5c 100%);
+  animation: bgDrift 30s ease-in-out infinite alternate;   /* transform only */
+}
+.bg-warm {
+  opacity: 0;
+  background:
+    radial-gradient(70% 60% at 50% 42%, rgba(255, 209, 102, 0.22), transparent 62%),
+    radial-gradient(55% 65% at 15% 85%, rgba(255, 45, 85, 0.22), transparent 60%),
+    radial-gradient(60% 55% at 85% 15%, rgba(255, 95, 162, 0.18), transparent 60%),
+    linear-gradient(160deg, #1b0716 0%, #3a0f2e 50%, #2a0b3d 100%);
+}
+body[data-phase="finale"] .bg-cool { opacity: 0.1; }
+body[data-phase="finale"] .bg-warm { opacity: 1; }
+@keyframes bgDrift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(-1.5%, 1.2%, 0) scale(1.06); }
+}
+
+/* Colour blobs: radial gradients with transparent edges, moved only via transform.
+   No filter, no blend modes — the cheapest possible lighting layer. */
+.blob {
+  position: absolute; border-radius: 50%;
+  opacity: 0.6;
+  will-change: transform;
+  transition: opacity 2.6s ease;
+}
+.blob-1 { width: 64vmax; height: 64vmax; left: -18vmax; top: -22vmax;
+  background: radial-gradient(circle, rgba(255, 45, 149, 0.5) 0%, rgba(255, 45, 149, 0.18) 34%, rgba(255, 45, 149, 0) 66%);
+  animation: blobA 28s ease-in-out infinite alternate; }
+.blob-2 { width: 58vmax; height: 58vmax; right: -18vmax; top: 4vmax;
+  background: radial-gradient(circle, rgba(199, 125, 255, 0.46) 0%, rgba(199, 125, 255, 0.16) 34%, rgba(199, 125, 255, 0) 66%);
+  animation: blobB 34s ease-in-out infinite alternate; }
+.blob-3 { width: 50vmax; height: 50vmax; left: 18vmax; bottom: -28vmax;
+  background: radial-gradient(circle, rgba(125, 249, 255, 0.26) 0%, rgba(125, 249, 255, 0.08) 34%, rgba(125, 249, 255, 0) 66%);
+  animation: blobC 40s ease-in-out infinite alternate; }
+body[data-phase="finale"] .blob-1 { opacity: 0.34; }
+body[data-phase="finale"] .blob-2 { opacity: 0.3; }
+body[data-phase="finale"] .blob-3 { opacity: 0.12; }
+
+@keyframes blobA { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(18vmax, 12vmax, 0) scale(1.18); } }
+@keyframes blobB { from { transform: translate3d(0, 0, 0) scale(1.1); } to { transform: translate3d(-16vmax, 18vmax, 0) scale(0.9); } }
+@keyframes blobC { from { transform: translate3d(0, 0, 0) scale(0.95); } to { transform: translate3d(14vmax, -14vmax, 0) scale(1.15); } }
+
+/* Warm gold light that grows behind the card in the finale */
+.gold-light {
+  position: absolute; left: 50%; top: 50%;
+  width: 120vmax; height: 120vmax;
+  transform: translate(-50%, -50%) scale(0.6);
+  background: radial-gradient(circle, rgba(255, 209, 102, 0.34) 0%, rgba(255, 140, 120, 0.16) 22%, rgba(255, 45, 149, 0.06) 40%, transparent 62%);
+  opacity: 0;
+  transition: opacity 2.8s ease, transform 3.2s var(--ease-out);
+  will-change: transform, opacity;
+}
+body[data-phase="finale"] .gold-light { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+/* Countdown tick pulse: strength grows each tick (JS drives it with the
+   Web Animations API; the .tick class is the fallback) */
+.pulse {
+  position: absolute; inset: 0; opacity: 0; pointer-events: none;
+  background: radial-gradient(60% 60% at 50% 50%, var(--pulse-col) 0%, rgba(255, 45, 149, 0.15) 45%, transparent 72%);
+  will-change: opacity, transform;
+}
+.pulse.tick { animation: pulseWash 0.9s ease-out; }
+@keyframes pulseWash {
+  0%   { opacity: 0; transform: scale(0.85); }
+  18%  { opacity: var(--pulse-max); transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+/* One-shot bloom flash from the centre as the burst begins */
+.bloom {
+  position: absolute; left: 50%; top: 50%; pointer-events: none;
+  width: 70vmin; height: 70vmin; margin: -35vmin 0 0 -35vmin; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 244, 230, 0.95), rgba(255, 209, 102, 0.55) 28%, rgba(255, 45, 149, 0.25) 55%, rgba(255, 45, 149, 0) 72%);
+  opacity: 0; transform: scale(0.2);
+  will-change: transform, opacity;
+}
+.bloom.go { animation: bloomFlash 1.4s ease-out forwards; }
+@keyframes bloomFlash {
+  0%   { opacity: 0; transform: scale(0.1); }
+  12%  { opacity: 1; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(3.4); }
+}
+
+.layer-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+#bgCanvas { z-index: 1; }
+.vignette {
+  position: fixed; inset: 0; z-index: 2; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(10, 3, 20, 0.55) 100%);
+}
+#fxCanvas { z-index: 3; }
+
+/* ---------- Layout & phase transitions ---------- */
+.stage {
+  position: fixed; inset: 0; z-index: 4;
+  height: 100vh; height: 100dvh;
+  overflow: hidden;
+}
+/* Phases cross-fade simultaneously: the leaving one scales away while the
+   next one is already fading in. Inactive phases never catch pointer events. */
+.phase {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+           max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transform: scale(1.04);
+  transition:
+    opacity var(--t-phase) ease var(--t-delay),
+    transform var(--t-phase) var(--ease-out) var(--t-delay),
+    visibility 0s linear calc(var(--t-phase) + var(--t-delay));
+  /* no permanent will-change here: a hidden phase should not keep a compositor layer alive */
+}
+.phase.is-active {
+  opacity: 1; visibility: visible; pointer-events: auto; transform: none;
+  transition:
+    opacity var(--t-phase) ease var(--t-delay),
+    transform var(--t-phase) var(--ease-out) var(--t-delay),
+    visibility 0s linear var(--t-delay);
+}
+.phase.enter-delayed { --t-delay: 0.35s; }
+.phase.is-leaving { transform: scale(0.94) translateY(-24px); }
+/* Only the LEAVING side is slow (2s, per the 2-3s transition rule): the "1"
+   and its aura zoom away and linger under the burst, while the finale section
+   itself still enters in 1s so the explosion is never delayed. */
+.phase.is-leaving-fast { --t-phase: 2s; transform: scale(1.55); }
+/* the finale section's children stage their own entrances, so the section
+   itself can appear quickly beneath the burst */
+.phase-finale.is-active { --t-phase: 1s; }
+.stage.no-anim .phase { transition: none !important; }
+/* Idle loops (glow breathe, subtitle bob, aura, note float) stop once a phase
+   is fully hidden — the leave classes are still present during the fade-out,
+   so nothing freezes mid-transition. */
+.phase:not(.is-active):not(.is-leaving):not(.is-leaving-fast) .title-glow,
+.phase:not(.is-active):not(.is-leaving):not(.is-leaving-fast) .subtitle,
+.phase:not(.is-active):not(.is-leaving):not(.is-leaving-fast) .aura-1,
+.phase:not(.is-active):not(.is-leaving):not(.is-leaving-fast) .note-float,
+.phase:not(.is-active):not(.is-leaving):not(.is-leaving-fast) .sticker-float,
+.phase:not(.is-active):not(.is-leaving):not(.is-leaving-fast) .card-edge::before { animation-play-state: paused; }
+
+/* ---------- Landing ---------- */
+.tilt {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  transform-style: preserve-3d;
+  will-change: transform;
+  max-width: min(92vw, 980px);
+}
+.phase-landing { perspective: 1200px; }
+
+.title-wrap { position: relative; transform: translateZ(40px); }
+.title {
+  position: relative; margin: 0;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: clamp(2.5rem, 8.4vw, 6.4rem);
+  line-height: 1.05; letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.title-text { position: relative; display: block; }
+/* blurred glowing copy behind the title: the blur is static, only opacity/scale animate */
+.title-glow {
+  position: absolute; inset: 0; display: block;
+  color: var(--pink-2);
+  filter: blur(18px);
+  opacity: 0.7;
+  animation: breathe 3.8s ease-in-out infinite;
+  will-change: opacity, transform;
+  pointer-events: none; user-select: none;
+}
+@keyframes breathe {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50%      { opacity: 0.95; transform: scale(1.05); }
+}
+/* Entrance animations: the base style IS the final state; keyframes only
+   describe where things come from (fill-mode: backwards holds the start
+   pose during the delay). JS "settles" the section afterwards by removing
+   the animations without changing how anything looks. */
+.title .word {
+  display: inline-block;
+  animation: rise 1.1s var(--ease-out) backwards;
+  animation-delay: calc(0.25s + var(--i) * 0.16s);
+  background: linear-gradient(180deg, #fff 0%, #ffe6f2 60%, var(--pink-3) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+}
+.title-glow .word { background: none; -webkit-text-fill-color: currentColor; }
+@keyframes rise { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes riseZ24 { from { opacity: 0; transform: translateZ(24px) translateY(28px); } to { opacity: 1; transform: translateZ(24px); } }
+@keyframes riseZ60 { from { opacity: 0; transform: translateZ(60px) translateY(28px); } to { opacity: 1; transform: translateZ(60px); } }
+.phase-landing.is-settled .word, .phase-landing.is-settled .accent,
+.phase-landing.is-settled .subtitle-wrap, .phase-landing.is-settled .cta-wrap { animation: none !important; }
+
+.accent {
+  margin: 0.35em 0 0;
+  font-family: var(--font-script);
+  font-size: clamp(2rem, 6.4vw, 4.4rem);
+  line-height: 1.1;
+  color: var(--gold-1);
+  animation: rise 1.2s var(--ease-out) backwards;
+  animation-delay: 0.85s;
+  text-shadow: 0 0 22px rgba(255, 209, 102, 0.55), 0 2px 18px rgba(255, 45, 149, 0.35);
+  display: flex; align-items: center; justify-content: center; gap: 0.5em;
+}
+.accent::before, .accent::after {
+  content: ''; height: 1px; width: clamp(28px, 6vw, 72px);
+  background: linear-gradient(90deg, transparent, var(--gold-2));
+  opacity: 0.8;
+}
+.accent::after { background: linear-gradient(270deg, transparent, var(--gold-2)); }
+.accent-text {
+  background: linear-gradient(90deg, var(--gold-2), #fff3c4 50%, var(--gold-1));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  padding: 0 0.15em;
+}
+
+.subtitle-wrap {
+  transform: translateZ(24px);
+  animation: riseZ24 1.2s var(--ease-out) backwards; animation-delay: 1.2s;
+}
+.subtitle {
+  margin: 1.1em auto 0; max-width: 34em;
+  font-size: clamp(1rem, 2.2vw, 1.3rem);
+  font-weight: 400; color: var(--ink-soft);
+  letter-spacing: 0.01em;
+  animation: bob 5s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+/* ---------- The button ---------- */
+.cta-wrap {
+  margin-top: clamp(1.6rem, 4vh, 2.8rem);
+  transform: translateZ(60px);
+  animation: riseZ60 1.2s var(--ease-out) backwards; animation-delay: 1.55s;
+  display: flex; flex-direction: column; align-items: center; gap: 0.9rem;
+}
+/* no text-transform: the hint is shown exactly as it is typed in CONFIG */
+.cta-hint { margin: 0; font-size: 0.85rem; color: var(--ink-dim); letter-spacing: 0.06em; }
+.cta-hint:empty { display: none; }
+
+.btn3d {
+  position: relative; border: 0; background: transparent; padding: 0;
+  min-height: 60px;
+  transform-style: preserve-3d;
+  transition: transform 0.35s var(--ease-spring);
+  will-change: transform;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.btn-depth {
+  position: absolute; inset: 0; border-radius: 999px;
+  background: linear-gradient(180deg, #a3155f, #5d0b3a);
+  transform: translateY(8px);
+  transition: transform 0.25s var(--ease-out);
+  box-shadow: 0 22px 46px rgba(255, 45, 149, 0.35), 0 8px 14px rgba(0, 0, 0, 0.35);
+}
+.btn-face {
+  position: relative; display: inline-flex; align-items: center; gap: 0.6em;
+  padding: 0.95em 2.1em; border-radius: 999px;
+  font-weight: 600; font-size: clamp(1.05rem, 2.4vw, 1.3rem); letter-spacing: 0.02em;
+  color: #fff;
+  background: linear-gradient(115deg, var(--pink-1) 0%, var(--pink-2) 38%, var(--gold-1) 100%);
+  background-size: 220% 100%; background-position: 0% 50%;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -2px 0 rgba(0, 0, 0, 0.15), 0 0 0 rgba(255, 95, 162, 0);
+  overflow: hidden;
+  transition: transform 0.35s var(--ease-spring), background-position 0.6s ease, box-shadow 0.35s ease;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.btn-icon { display: inline-block; font-size: 1.25em; line-height: 1; transform-origin: 50% 70%; }
+.btn-shimmer {
+  position: absolute; top: -40%; bottom: -40%; left: -60%; width: 40%;
+  background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+  transform: skewX(-18deg) translateX(0);
+  opacity: 0; pointer-events: none;
+}
+.btn3d:hover .btn-face, .btn3d:focus-visible .btn-face {
+  transform: translateY(-6px) scale(1.05);
+  background-position: 100% 50%;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -2px 0 rgba(0, 0, 0, 0.15),
+              0 0 28px rgba(255, 95, 162, 0.7), 0 0 70px rgba(255, 209, 102, 0.35);
+}
+.btn3d:hover .btn-depth, .btn3d:focus-visible .btn-depth {
+  transform: translateY(12px) scale(1.05);
+  box-shadow: 0 30px 60px rgba(255, 45, 149, 0.5), 0 12px 18px rgba(0, 0, 0, 0.4);
+}
+/* .is-hot is held until the wiggle/shimmer cycle ends, so hover-out eases
+   back to rest instead of snapping mid-animation. */
+.btn3d.is-hot .btn-icon { animation: wiggle 0.9s ease-in-out infinite; }
+.btn3d.is-hot .btn-shimmer { animation: shimmer 1.6s ease-in-out infinite; }
+/* Press: the face sinks INTO the base, so the base stays put rather than
+   popping out above the face. */
+.btn3d:active .btn-face { transform: translateY(5px) scale(0.98); transition-duration: 0.1s; }
+.btn3d:active .btn-depth { transform: translateY(8px); transition-duration: 0.1s; }
+.btn3d.is-pressed { pointer-events: none; }
+.btn3d.is-pressed .btn-face {
+  transform: translateY(4px) scale(0.97);
+  background-position: 100% 50%;   /* keep the lit hover gradient through the click beat */
+  box-shadow: 0 0 40px rgba(255, 209, 102, 0.8);
+}
+.btn3d.is-pressed .btn-depth { transform: translateY(8px); }
+.btn3d.is-pressed .btn-icon { animation: wiggle 0.6s ease-in-out 1; }
+.btn3d:focus-visible { outline: 3px solid var(--cyan); outline-offset: 6px; border-radius: 999px; }
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0) translateY(0); }
+  25%      { transform: rotate(-14deg) translateY(-2px); }
+  60%      { transform: rotate(12deg) translateY(-3px); }
+}
+@keyframes shimmer {
+  0%   { opacity: 0; transform: skewX(-18deg) translateX(0); }
+  15%  { opacity: 1; }
+  60%  { opacity: 1; }
+  100% { opacity: 0; transform: skewX(-18deg) translateX(520%); }
+}
+.ripple {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  width: 20px; height: 20px; margin: -10px 0 0 -10px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 70%);
+  animation: ripple 0.8s ease-out forwards;
+}
+@keyframes ripple { from { transform: scale(0); opacity: 1; } to { transform: scale(18); opacity: 0; } }
+
+/* ---------- Countdown ---------- */
+.phase-countdown { --cs: clamp(7rem, 26vw, 16rem); }
+.count-wrap { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.aura, .aura-ring {
+  position: absolute; left: 50%; top: 50%; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.aura-1 {
+  width: calc(var(--cs) * 2.4); height: calc(var(--cs) * 2.4);
+  background: radial-gradient(circle, var(--count-col) 0%, transparent 60%);
+  opacity: 0.22;
+  animation: auraBreath 2.4s ease-in-out infinite;
+  transition: --count-col 0.6s ease;
+  margin-top: calc(var(--cs) * -0.12);
+}
+.aura-2 {
+  width: calc(var(--cs) * 1.5); height: calc(var(--cs) * 1.5);
+  background: radial-gradient(circle, #fff 0%, var(--count-col) 30%, transparent 62%);
+  opacity: 0.18;
+  transition: --count-col 0.6s ease;
+  margin-top: calc(var(--cs) * -0.12);
+}
+.aura-2.tick { animation: auraPulse 0.9s ease-out; }
+.aura-ring {
+  width: calc(var(--cs) * 1.35); height: calc(var(--cs) * 1.35);
+  border: 2px solid var(--count-col);
+  box-shadow: 0 0 24px var(--count-col), inset 0 0 24px var(--count-col);
+  opacity: 0;
+  margin-top: calc(var(--cs) * -0.12);
+}
+.aura-ring.tick { animation: ringOut 1s ease-out; }
+@keyframes auraBreath { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.12); } }
+@keyframes auraPulse { 0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.7; } 100% { transform: translate(-50%, -50%) scale(1.35); opacity: 0.1; } }
+@keyframes ringOut { 0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.9; } 100% { transform: translate(-50%, -50%) scale(1.9); opacity: 0; } }
+
+.count-num {
+  position: relative;
+  width: calc(var(--cs) * 1.6); height: calc(var(--cs) * 1.15);
+  font-family: var(--font-display); font-weight: 700;
+  font-size: var(--cs); line-height: 1;
+  color: var(--count-col);
+  /* No --count-col transition here: interpolating it would repaint the huge
+     blurred-shadow number layers every frame. Each .num carries its own tick
+     colour instead, and the JS crossfade does the visual blend. */
+}
+/* Each number's enter/exit is tweened by JS (transform + opacity only) so the
+   crossfade stays in step with the tick clock. */
+.count-num .num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--count-col);
+  text-shadow: 0 0 18px var(--count-col), 0 0 60px var(--count-col), 0 4px 30px rgba(0, 0, 0, 0.4);
+  will-change: transform, opacity;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+}
+.count-caption {
+  margin: 0.4em 0 0; font-size: clamp(0.95rem, 2vw, 1.2rem);
+  color: var(--ink-soft); letter-spacing: 0.08em; font-style: italic;
+  font-family: var(--font-display);
+}
+
+/* ---------- Finale: envelope ---------- */
+.phase-finale { flex-direction: column; }
+.envelope {
+  position: absolute; left: 50%; top: 50%;
+  width: min(340px, 72vw); aspect-ratio: 3 / 2;
+  transform: translate(-50%, -50%) scale(0.7);
+  transform-style: preserve-3d;
+  perspective: 900px;
+  opacity: 0;
+  transition: opacity 0.6s ease, transform 0.9s var(--ease-spring);
+  will-change: transform, opacity;
+  visibility: hidden;
+}
+.envelope.s0 { visibility: visible; opacity: 1; transform: translate(-50%, -50%) scale(1); transition-duration: 0.5s, 0.6s; }
+.envelope.s3 { opacity: 0; transform: translate(-50%, -50%) scale(0.85) translateY(60px); transition: opacity 0.8s ease, transform 0.8s ease; visibility: visible; }
+.envelope.s3.done { visibility: hidden; }
+.env-back {
+  position: absolute; inset: 0; border-radius: 12px; z-index: 1;
+  background: linear-gradient(180deg, #4a1454, #2a0a3a);
+  border: 1px solid rgba(255, 209, 102, 0.45);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), 0 0 60px rgba(255, 209, 102, 0.18);
+}
+.env-letter {
+  position: absolute; left: 6%; top: 6%; width: 88%; height: 92%; z-index: 2;
+  border-radius: 6px;
+  background-image: repeating-linear-gradient(180deg, transparent 0 26px, rgba(120, 40, 80, 0.12) 26px 27px), linear-gradient(180deg, #fff9f0, #f6e6d4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  display: flex; align-items: center; justify-content: center;
+  transform: translateY(0);
+  transition: transform 1.1s var(--ease-out), opacity 0.5s ease;
+  will-change: transform;
+}
+.env-letter-heart { font-size: 2.4rem; color: var(--red); text-shadow: 0 0 14px rgba(255, 45, 85, 0.6); transform: translateY(-6%); }
+.envelope.s2 .env-letter { transform: translateY(-104%); }
+.envelope.s3 .env-letter { opacity: 0; }
+.env-pocket {
+  position: absolute; inset: 0; border-radius: 12px; z-index: 3;
+  background: linear-gradient(200deg, #5a1a6e 0%, #3b0f5c 55%, #2a0a3a 100%);
+  clip-path: polygon(0 0, 50% 58%, 100% 0, 100% 100%, 0 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 209, 102, 0.35);
+}
+.env-pocket::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 49.2%, rgba(255, 209, 102, 0.45) 50%, transparent 50.8%);
+  clip-path: polygon(0 100%, 50% 58%, 100% 100%);
+  opacity: 0.6;
+}
+.env-flap {
+  position: absolute; inset: 0; z-index: 4;
+  background: linear-gradient(180deg, #6a1f80, #3b0f5c);
+  clip-path: polygon(0 0, 100% 0, 50% 60%);
+  transform-origin: 50% 0;
+  transform: rotateX(0deg);
+  transition: transform 1s var(--ease-out), z-index 0s linear 0.5s;
+  border-radius: 12px 12px 0 0;
+  backface-visibility: visible;
+}
+.env-seal {
+  position: absolute; left: 50%; top: 60%;
+  transform: translate(-50%, -60%);
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 40% 35%, #ff6b8a, #c1121f 70%);
+  color: #fff; font-size: 1.05rem; line-height: 1;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.envelope.s1 .env-flap { transform: rotateX(180deg); z-index: 0; }
+
+/* ---------- Finale: card ---------- */
+.card-scene {
+  position: relative; z-index: 5;
+  perspective: 1500px;
+  width: min(620px, 92vw);
+  display: flex; justify-content: center;
+}
+.card {
+  position: relative;
+  width: 100%;
+  /* Always leave room for the Replay button (48px + 18px inset + gap) so it
+     can never be painted over the letter on short/landscape screens. */
+  max-height: 84vh;
+  max-height: min(84vh, 84dvh, calc(100dvh - 156px));
+  border-radius: 22px;
+  padding: 3px;
+  background: linear-gradient(140deg, rgba(255, 209, 102, 0.85), rgba(255, 95, 162, 0.55) 45%, rgba(255, 209, 102, 0.7));
+  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.55), 0 0 70px rgba(255, 209, 102, 0.22), 0 0 140px rgba(255, 45, 149, 0.18);
+  transform-origin: 50% 0%;
+  transform: rotateX(-90deg) translateY(-30px) scale(0.8);
+  opacity: 0;
+  visibility: hidden;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+  display: flex;
+}
+/* 3D unfold from the top hinge with a small overshoot, like paper settling */
+.card.is-open {
+  visibility: visible;
+  animation: cardUnfold 1.7s cubic-bezier(0.35, 0.3, 0.2, 1.05) forwards;
+}
+.card.is-open.settled { animation: none; opacity: 1; transform: none; }
+/* the fold is spread over the first half so the 3D hinge actually reads */
+@keyframes cardUnfold {
+  0%   { opacity: 0; transform: rotateX(-90deg) translateY(-30px) scale(0.8); }
+  28%  { opacity: 1; }
+  50%  { transform: rotateX(6deg) translateY(0) scale(1); }
+  100% { opacity: 1; transform: rotateX(0deg) translateY(0) scale(1); }
+}
+/* Gold light sweeping around the edge: a masked ring whose gradient child is
+   moved with transform only, so the ring rasterises once instead of repainting
+   every frame for the whole finale. */
+.card-edge {
+  position: absolute; inset: 0; border-radius: 22px; pointer-events: none; z-index: 3;
+  padding: 3px;
+  overflow: hidden;
+  -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+  mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 1.2s ease 0.8s;
+}
+.card-edge::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 260%;
+  background: linear-gradient(120deg, rgba(255, 246, 210, 0) 25%, rgba(255, 246, 210, 0.95) 50%, rgba(255, 246, 210, 0) 75%);
+  transform: translate3d(-80%, 0, 0);
+}
+.card.is-open .card-edge { opacity: 1; }
+.card.is-open .card-edge::before { will-change: transform; animation: edgeSweep 6s ease-in-out infinite 1.5s; }
+@keyframes edgeSweep {
+  0%   { transform: translate3d(-80%, 0, 0); }
+  100% { transform: translate3d(86.15%, 0, 0); }
+}
+.card-scroll {
+  position: relative;
+  width: 100%;
+  border-radius: 19px;
+  padding: clamp(1.3rem, 3.2vw, 2.1rem) clamp(1.3rem, 4.2vw, 2.7rem);
+  overflow-y: auto; overscroll-behavior: contain;
+  /* a keepsake picture leaning into the padding must never be able to flip
+     overflow-x to `auto` and pop a horizontal scrollbar inside the letter */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  background: linear-gradient(160deg, rgba(56, 16, 76, 0.72), rgba(26, 8, 40, 0.84));
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  color: var(--ink);
+  text-align: left;
+  scrollbar-width: thin; scrollbar-color: rgba(255, 209, 102, 0.5) transparent;
+}
+.card-scroll::-webkit-scrollbar { width: 6px; }
+.card-scroll::-webkit-scrollbar-thumb { background: rgba(255, 209, 102, 0.4); border-radius: 3px; }
+.card-shine {
+  position: absolute; inset: 3px; border-radius: 19px; pointer-events: none; z-index: 2;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0) 70%, rgba(255, 209, 102, 0.08) 100%);
+}
+/* "there is more to read" cue when the letter overflows the card (JS toggles .can-scroll) */
+.card-more {
+  position: absolute; left: 3px; right: 3px; bottom: 3px; height: 56px;
+  border-radius: 0 0 19px 19px; z-index: 3; pointer-events: none;
+  opacity: 0; transition: opacity 0.4s ease;
+  background: linear-gradient(to bottom, rgba(26, 8, 40, 0), rgba(26, 8, 40, 0.92));
+}
+.card-more::after {
+  content: ''; position: absolute; left: 50%; bottom: 10px;
+  width: 10px; height: 10px;
+  border-right: 2px solid var(--gold-1); border-bottom: 2px solid var(--gold-1);
+  transform: translateX(-50%) rotate(45deg);
+  animation: moreBob 1.6s ease-in-out infinite;
+}
+@keyframes moreBob { 50% { transform: translate(-50%, 4px) rotate(45deg); } }
+.card.can-scroll .card-more { opacity: 1; }
+/* letter content fades in line by line (JS sets --i) */
+.card-line {
+  opacity: 0; transform: translateY(14px);
+  transition: opacity 0.8s ease, transform 0.8s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 0.22s);
+}
+.card.is-revealed .card-line { opacity: 1; transform: translateY(0); }
+.card-ornament {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  color: var(--gold-1); font-size: 1.1rem; line-height: 1; margin: 0 0 0.6rem;
+}
+.card-ornament span { display: block; width: 54px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-2), transparent); }
+.card-ornament i { font-style: normal; text-shadow: 0 0 12px rgba(255, 209, 102, 0.6); }
+.card-heading {
+  margin: 0 0 0.45em; text-align: center;
+  font-family: var(--font-script); font-weight: 400;
+  font-size: clamp(2rem, 4.8vw, 3rem); line-height: 1.15;
+  color: var(--gold-1);
+  text-shadow: 0 0 22px rgba(255, 209, 102, 0.4);
+}
+.card-body p {
+  margin: 0 0 0.8em;
+  font-family: var(--font-letter); font-weight: 500;
+  font-size: clamp(1.06rem, 1.7vw, 1.2rem); line-height: 1.55;
+  color: rgba(255, 245, 250, 0.94);
+  letter-spacing: 0.005em;
+}
+.card-closing {
+  margin: 1em 0 0.35em;
+  font-family: var(--font-letter); font-style: italic; font-weight: 500;
+  font-size: clamp(1.06rem, 1.8vw, 1.22rem); line-height: 1.5;
+  color: var(--gold-2);
+}
+.card-signature {
+  margin: 0; font-family: var(--font-script);
+  font-size: clamp(1.9rem, 4.6vw, 2.7rem); line-height: 1.15;
+  color: var(--pink-3);
+  text-shadow: 0 0 18px rgba(255, 95, 162, 0.5);
+  text-align: right;
+}
+
+/* ---------- Finale: floating notes ---------- */
+.notes {
+  position: absolute; pointer-events: none; overflow: hidden;
+  inset: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+}
+.note {
+  position: absolute;
+  /* clamped so a slot near an edge can never push a rotated note off-screen */
+  left: clamp(8px, var(--x, 50%), calc(100% - 8px));
+  top: clamp(28px, var(--y, 50%), calc(100% - 28px));
+  /* never wide enough to straddle the card */
+  max-width: min(30vw, 360px, calc((100vw - min(620px, 92vw)) / 2 - 24px));
+  font-family: var(--font-script);
+  font-size: clamp(1.25rem, 2.3vw, 1.85rem);
+  line-height: 1.1;
+  color: var(--gold-1);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(var(--r, 0deg)) translateY(18px) scale(0.94);
+  transition: opacity 1.4s ease, transform 1.4s var(--ease-out);
+  text-shadow: 0 0 14px rgba(255, 209, 102, 0.55), 0 2px 12px rgba(0, 0, 0, 0.55);
+  will-change: transform, opacity;
+}
+/* landscape phones: notes live in the narrow gutters beside the card */
+.note.side {
+  white-space: normal; text-align: center;
+  font-size: 1.05rem;
+  max-width: calc((100vw - min(620px, 92vw)) / 2 - 20px);
+}
+.note.pink { color: var(--pink-3); text-shadow: 0 0 14px rgba(255, 143, 200, 0.6), 0 2px 12px rgba(0, 0, 0, 0.55); }
+.note.violet { color: #e9d2ff; text-shadow: 0 0 14px rgba(199, 125, 255, 0.6), 0 2px 12px rgba(0, 0, 0, 0.55); }
+.note.is-in { opacity: 0.92; transform: translate(-50%, -50%) rotate(var(--r, 0deg)) translateY(0) scale(1); }
+.note-float { display: inline-block; animation: noteFloat var(--d, 6s) ease-in-out infinite alternate; }
+@keyframes noteFloat { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(6px, -12px, 0); } }
+/* When the couple are standing in the gutters the notes move into the narrow
+   outer field, where a single running line no longer fits — there they wrap
+   into a centred column whose width JS measures and writes as --note-band. */
+.note.band {
+  white-space: normal; text-align: center;
+  max-width: var(--note-band, 190px);
+  font-size: clamp(1.1rem, 1.85vw, 1.6rem);
+}
+/* One frame of "show me your settled box without moving": JS adds this while it
+   measures each note against the figures, then removes it. The notes are still
+   opacity 0 at that point, so nothing is ever painted mid-measurement. */
+.notes.is-measuring .note {
+  transition: none !important;
+  transform: translate(-50%, -50%) rotate(var(--r, 0deg));
+}
+
+/* ---------- Finale: the couple stickers ----------
+   Two homes, one set of elements. JS moves each figure between them:
+     .sticker-layer  – absolutely placed in the band AROUND the card. Every
+                       left/top is written in pixels from the card's measured
+                       box; nothing here is guessed from a percentage.
+     .keepsake-row   – a framed strip at the END of the letter, in normal flow,
+                       used only where the screen leaves no room outside.
+   The layer sits under .card-scene (z-index 5), so even a mistake could only
+   ever be painted behind the letter, never over it. */
+.sticker-layer {
+  position: absolute; z-index: 4; pointer-events: none;
+  inset: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+}
+.sticker {
+  position: relative;
+  opacity: 0;
+  transform: translateY(24px) scale(0.92);
+  transition: opacity 1.1s ease, transform 1.25s var(--ease-spring);
+  will-change: transform, opacity;   /* also makes ::before's z-index local */
+}
+.sticker-layer .sticker {
+  position: absolute; left: var(--sx, 50%); top: var(--sy, 50%);
+  transform: translate(-50%, -50%) rotate(var(--r, 0deg)) translateY(24px) scale(0.92);
+}
+.sticker-layer .sticker.is-in { transform: translate(-50%, -50%) rotate(var(--r, 0deg)) translateY(0) scale(1); }
+.sticker.is-in { opacity: 1; }
+.keepsake .sticker.is-in { transform: none; }
+/* Warm ground-glow so the figures stand in the scene's light instead of
+   looking pasted on. A plain radial gradient — no filter, no extra layer. */
+.sticker::before {
+  content: ''; position: absolute; z-index: -1;
+  left: 50%; bottom: -5%; width: 106%; height: 26%;
+  transform: translateX(-50%);
+  background: radial-gradient(50% 50% at 50% 50%, rgba(255, 209, 102, 0.32), rgba(255, 95, 162, 0.14) 52%, rgba(255, 95, 162, 0) 76%);
+}
+/* Sized by HEIGHT — the five drawings run from 0.47 to 0.78 wide per unit of
+   height, so one shared box would letterbox or squash them. */
+.sticker img {
+  display: block; height: var(--h, 150px); width: auto;
+  user-select: none; -webkit-user-select: none; -webkit-user-drag: none;
+  filter: drop-shadow(0 12px 18px rgba(16, 4, 26, 0.55)) drop-shadow(0 0 26px rgba(255, 196, 130, 0.22));
+}
+.sticker-float { display: block; animation: stickerFloat var(--d, 7s) ease-in-out infinite alternate; }
+@keyframes stickerFloat {
+  from { transform: translate3d(0, 0, 0) rotate(0deg); }
+  to   { transform: translate3d(0, -9px, 0) rotate(var(--rf, 1.2deg)); }
+}
+
+/* The keepsake strip at the end of the letter: a gold hairline, the pictures
+   standing on ONE baseline (align-items: flex-end), and a script caption. */
+.keepsake {
+  margin: 1.5rem 0 0.2rem;
+  opacity: 0; transform: translateY(14px);
+  transition: opacity 0.9s ease, transform 0.9s var(--ease-out);
+}
+.keepsake.is-in { opacity: 1; transform: none; }
+.keepsake[hidden] { display: none; }
+.keepsake-rule {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  color: var(--pink-3); font-size: 0.95rem; line-height: 1;
+}
+.keepsake-rule span { display: block; height: 1px; width: 64px; background: linear-gradient(90deg, transparent, var(--gold-2), transparent); }
+.keepsake-rule i { font-style: normal; text-shadow: 0 0 12px rgba(255, 95, 162, 0.6); }
+.keepsake-row {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center;
+  gap: var(--sgap, 12px);
+  margin: 0.85rem 0 0.55rem;
+}
+/* elliptical contact shadow, so each pair stands on the paper */
+.keepsake .sticker::after {
+  content: ''; position: absolute; left: 50%; bottom: -7px;
+  width: 84%; height: 11px; transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(12, 3, 20, 0.5), rgba(12, 3, 20, 0) 72%);
+}
+.keepsake-cap {
+  margin: 0; text-align: center;
+  font-family: var(--font-script);
+  font-size: clamp(1.15rem, 4vw, 1.5rem); line-height: 1.2;
+  color: var(--gold-2); opacity: 0.9;
+}
+
+/* ---------- Finale: replay ---------- */
+.replay {
+  position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translate(-50%, 16px);
+  z-index: 6;
+  min-height: 48px; padding: 0.7em 1.6em; border-radius: 999px;
+  border: 1px solid rgba(255, 209, 102, 0.7);
+  background: rgba(30, 8, 40, 0.55);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: var(--gold-1); font-weight: 600; letter-spacing: 0.04em;
+  display: inline-flex; align-items: center; gap: 0.5em;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 0.9s ease, transform 0.9s var(--ease-out), box-shadow 0.3s ease, background 0.3s ease, visibility 0s linear 0.9s;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+.replay.is-visible { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 0); transition-delay: 0s; }
+.replay:hover, .replay:focus-visible { transform: translate(-50%, -3px) scale(1.05); background: rgba(255, 209, 102, 0.16); color: #fff2cc; box-shadow: 0 0 30px rgba(255, 209, 102, 0.45), 0 10px 30px rgba(0, 0, 0, 0.45); }
+.replay:active { transform: translate(-50%, 1px) scale(0.98); }
+.replay:hover .replay-icon { animation: twinkle 0.9s ease-in-out infinite; }
+.replay-icon { display: inline-block; }
+@keyframes twinkle { 0%, 100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.3) rotate(20deg); } }
+
+/* ---------- Mute toggle + sound hint ---------- */
+.mute {
+  position: fixed; z-index: 20;
+  top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right));
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(30, 8, 40, 0.5);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.25rem; line-height: 1;
+  transition: transform 0.3s var(--ease-spring), box-shadow 0.3s ease, background 0.3s ease;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+.mute:hover, .mute:focus-visible { transform: scale(1.1); background: rgba(255, 45, 149, 0.28); box-shadow: 0 0 24px rgba(255, 95, 162, 0.5); }
+.mute:active { transform: scale(0.94); }
+.mute.is-muted { border-color: rgba(255, 255, 255, 0.12); }
+.mute.is-muted .mute-icon { opacity: 0.7; }
+.mute-icon { display: inline-block; transition: transform 0.3s var(--ease-spring); }
+.mute:active .mute-icon { transform: scale(0.85); }
+
+.sound-hint {
+  position: fixed; z-index: 20; margin: 0;
+  /* in the same top bar as the mute button, to its left: nothing else uses that row */
+  top: max(14px, env(safe-area-inset-top));
+  right: calc(max(14px, env(safe-area-inset-right)) + 58px);
+  line-height: 48px;
+  font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-soft); text-align: right;
+  opacity: 0; pointer-events: none;
+  transition: opacity 1s ease;
+}
+.sound-hint.is-visible { opacity: 0.85; }
+
+/* ---------- Settle points ----------
+   JS adds these after a transition's expected end. In a normal browser the
+   transition has already finished, so nothing changes; if the animation clock
+   ever stalls (throttled tab, headless capture) the element still lands in
+   its final state instead of being stuck mid-way. */
+.envelope.settled, .envelope.settled .env-flap, .envelope.settled .env-letter,
+.card.settled, .card.lines-settled .card-line,
+.note.settled, .sticker.settled, .keepsake.settled, .replay.settled, .phase.settled,
+body.bg-settled .bg-layer, body.bg-settled .gold-light, body.bg-settled .blob { transition: none !important; }
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .title-glow, .subtitle, .aura-1, .note-float, .sticker-float, .btn-icon, .btn-shimmer, .replay-icon, .bg-cool, .blob,
+  .card-edge, .card-edge::before, .card-more::after { animation: none !important; }
+  .sticker, .keepsake { transition-duration: 0.6s; }
+  .title .word, .accent, .subtitle-wrap, .cta-wrap { animation-duration: 0.6s; }
+  .phase { --t-phase: 1s; }
+  .tilt { transform: none !important; }
+}
+html.reduced .title-glow, html.reduced .subtitle, html.reduced .aura-1, html.reduced .note-float, html.reduced .sticker-float,
+html.reduced .btn-icon, html.reduced .btn-shimmer, html.reduced .replay-icon, html.reduced .bg-cool, html.reduced .blob,
+html.reduced .card-edge, html.reduced .card-edge::before, html.reduced .card-more::after { animation: none !important; }
+html.reduced .title .word, html.reduced .accent, html.reduced .subtitle-wrap, html.reduced .cta-wrap { animation-duration: 0.6s; }
+html.reduced .phase { --t-phase: 1s; }
+html.reduced .tilt { transform: none !important; }
+html.reduced .card-edge { opacity: 0.6; }
+html.reduced .card.is-open { animation: cardFade 0.9s ease forwards; }
+@keyframes cardFade { from { opacity: 0; transform: none; } to { opacity: 1; transform: none; } }
+html.reduced .card-line { transition-delay: calc(var(--i, 0) * 0.08s); transition-duration: 0.5s; }
+html.reduced .note { transition-duration: 0.6s; }
+html.reduced .sticker, html.reduced .keepsake { transition-duration: 0.6s; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+  .phase-countdown { --cs: clamp(6rem, 30vw, 9rem); }
+  .card-scene { width: min(640px, 94vw); }
+  .card { max-height: 60vh; max-height: min(60vh, 60dvh); }
+  /* the frosted read without a per-frame backdrop readback over the petal rain */
+  .card-scroll {
+    padding: 1.25rem 1.1rem;
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: linear-gradient(160deg, rgba(56, 16, 76, 0.84), rgba(26, 8, 40, 0.92));
+  }
+  .card-body p { font-size: 1.05rem; line-height: 1.5; }
+  .card-ornament span { width: 40px; }
+  .note { font-size: clamp(1.1rem, 4.8vw, 1.3rem); max-width: 44vw; white-space: normal; text-align: center; }
+  .replay { bottom: max(12px, env(safe-area-inset-bottom)); padding: 0.55em 1.3em; }
+  .btn-face { padding: 0.9em 1.7em; }
+  .sound-hint { font-size: 0.64rem; white-space: nowrap; }
+}
+@media (max-height: 560px) {
+  .card { max-height: 86vh; max-height: min(86vh, calc(100vh - 156px)); }
+  .subtitle { margin-top: 0.6em; }
+  .cta-wrap { margin-top: 1rem; }
+}
