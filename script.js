@@ -26,16 +26,19 @@
    ===================================================================== */
 const CONFIG = {
   // Names
-  partnerName: "My Love",          // shown under the title and at the top of the letter
+  partnerName: "My Love",          // used wherever you write {partner}
   senderName: "Me",                // ← your name; the letter is signed "With all my heart, <your name>"
 
-  // Landing text
-  title: "Happy 2nd Monthsary",
-  subtitle: "Two months of us, and every day still feels like the first.",
+  // Landing text. The first page is dressed as a plain interior-design page
+  // so nothing gives the surprise away before the button is clicked; the
+  // title is also what the browser tab shows.
+  title: "Interior Design Tips",
+  eyebrow: "Home · Style · Living",   // small line above the title ("" to hide)
+  subtitle: "Simple ideas to make every room feel like home.",
 
   // The button. Keep it short.
-  buttonText: "Click or open this",
-  buttonHint: "a little something is waiting inside",   // small line under the button, shown exactly as you type it ("" to hide)
+  buttonText: "Click to Start",
+  buttonHint: "a quick guide to styling your space",   // small line under the button, shown exactly as you type it ("" to hide)
 
   // Countdown
   countdownSeconds: 10,
@@ -306,6 +309,9 @@ window.app = (function () {
     // changes, otherwise the background snaps instead of fading on Replay.
     dom.body.classList.remove('bg-settled');
     dom.body.setAttribute('data-phase', phase);
+    // a phone's browser bar follows the page: white on the landing, purple after
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeMeta) themeMeta.setAttribute('content', phase === 'landing' ? '#ffffff' : '#1a0b2e');
     if (phase === 'landing') enterLanding(prev, opts);
     else if (phase === 'countdown') enterCountdown(prev, opts);
     else if (phase === 'finale') enterFinale(prev, opts);
@@ -326,9 +332,8 @@ window.app = (function () {
     restartAnimations(dom.landing);
     switchSection(from, dom.landing, { delayed: !!from });
     bg.warm = 0;
-    bg.sparkleRate = env.reduced ? 0.6 : (env.mobile ? 1.6 : 3);
     if (opts.instant) instantShow(dom.landing);
-    announce(fill(CONFIG.title) + ', ' + fill(CONFIG.partnerName) + '.');
+    announce(fill(CONFIG.title) + '.');
     // entrance finished (last element: cta-wrap at 1.55s + 1.2s) — plus crossfade delay when replaying
     after((from ? 600 : 0) + 2900, () => dom.landing.classList.add('is-settled'));
   }
@@ -515,7 +520,7 @@ window.app = (function () {
     pulse: 0,        // countdown tick pulse (decays)
     warm: 0,         // 0 cool → 1 warm (finale)
     warmNow: 0,
-    sparkleRate: 3,  // sparkles spawned per second near the title (landing)
+    sparkleRate: 0,  // sparkles / tiny hearts per second near the title on the landing (0: it has to pass for a plain interior-design page)
     sparkleAcc: 0,
     sprites: null
   };
@@ -876,21 +881,48 @@ window.app = (function () {
        Played through a plain <audio> element rather than the Web Audio graph:
        a local file opened from file:// is treated as cross-origin, so routing
        it through createMediaElementSource() would silence it. That means its
-       volume is handled here instead of by the master gain. */
+       volume is handled here instead of by the master gain.
+       Only ONE copy of the song ever plays: the element is built once and is
+       never replaced, so a loading hiccup can't let a later tap start a second
+       copy on top of the first, and starting it in one tab pauses it in any
+       other tab showing this page. */
     let song = null, songWant = 0;   // songWant: volume we are fading towards
+    let songFailed = false;          // the file never loaded: the synth pad plays instead
+
+    let otherTabs = null;
+    try { otherTabs = new BroadcastChannel('song:' + location.pathname); } catch (e) { otherTabs = null; }
+    if (otherTabs) otherTabs.onmessage = function () {
+      stopMusic();
+      // paused right away: a background tab's frame loop (and so the fade) is stopped
+      if (song && !song.paused) song.pause();
+    };
 
     function songEl() {
-      if (song || !CONFIG.musicFile) return song;
+      if (song || songFailed || !CONFIG.musicFile) return song;
       try {
-        song = new Audio(CONFIG.musicFile);
-        song.loop = true;
-        song.preload = 'auto';
-        song.volume = 0;
-        song.muted = muted;
-        song.addEventListener('error', function () { song = null; });   // fall back to the synth pad
-        // the song counts as "sound is on", so the tap-for-sound hint can go
-        song.addEventListener('playing', function () { if (onUnlocked) onUnlocked(); });
-      } catch (e) { song = null; }
+        const s = new Audio(CONFIG.musicFile);
+        s.loop = true;
+        s.preload = 'auto';
+        s.volume = 0;
+        s.muted = muted;
+        let started = false;
+        s.addEventListener('playing', function () {
+          started = true;
+          if (otherTabs) otherTabs.postMessage('playing');
+          // the song counts as "sound is on", so the tap-for-sound hint can go
+          if (onUnlocked) onUnlocked();
+        });
+        s.addEventListener('error', function () {
+          // an error after it started (a dropped connection) keeps this same element
+          if (started) return;
+          // the file can't be loaded at all: silence it for good and use the synth pad
+          songFailed = true;
+          song = null;
+          try { s.pause(); } catch (e) { /* ignore */ }
+          if (wantMusic) startMusic();
+        });
+        song = s;
+      } catch (e) { songFailed = true; }
       return song;
     }
 
@@ -899,6 +931,7 @@ window.app = (function () {
       const s = songEl();
       if (!s) return false;
       songWant = clamp(CONFIG.musicVolume == null ? 0.6 : CONFIG.musicVolume, 0, 1);
+      if (!s.paused) return true;    // already playing: nothing to start
       try {
         const p = s.play();
         if (p && p.catch) p.catch(function () { /* no gesture yet — retried on unlock() */ });
@@ -2724,7 +2757,7 @@ window.app = (function () {
     window.addEventListener('pointerleave', onPointerLeave);
     document.addEventListener('mouseleave', onPointerLeave);
     dom.openBtn.addEventListener('click', onOpenClick);
-    // Hold the icon wiggle / shimmer until the current cycle finishes, so
+    // Hold the icon nudge / shimmer until the current cycle finishes, so
     // moving the pointer away eases out instead of snapping to rest.
     const btnIcon = dom.openBtn.querySelector('.btn-icon');
     const heat = () => dom.openBtn.classList.add('is-hot');
@@ -2840,12 +2873,13 @@ window.app = (function () {
       dom.titleGlow.appendChild(g);
       if (i < words.length - 1) dom.titleGlow.appendChild(document.createTextNode(' '));
     }
-    dom.accentText.textContent = fill(CONFIG.partnerName);
+    dom.accentText.textContent = fill(CONFIG.eyebrow);
+    dom.accentText.parentNode.hidden = !CONFIG.eyebrow;
     dom.subtitle.textContent = fill(CONFIG.subtitle);
     dom.btnLabel.textContent = fill(CONFIG.buttonText);
     dom.ctaHint.textContent = fill(CONFIG.buttonHint);
     dom.countCaption.textContent = fill(CONFIG.countdownCaption);
-    document.title = fill(CONFIG.title) + ' — ' + fill(CONFIG.partnerName);
+    document.title = fill(CONFIG.title);
   }
 
   function init() {

@@ -3,9 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1a0b2e">
-  <meta name="description" content="A little surprise, wrapped in flowers.">
-  <title>interior design tips</title>
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Simple, practical interior design tips to make every room feel like home.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Interior Design Tips">
+  <meta property="og:description" content="Simple, practical interior design tips to make every room feel like home.">
+  <title>Interior Design Tips</title>
 
   <!-- Google Fonts are optional: every font-family in style.css has a full local fallback stack,
        so the page still looks right when opened offline from a double-clicked index.html.
@@ -20,7 +23,8 @@
 </head>
 <body data-phase="landing">
 
-  <!-- ===== Background: gradient layers, drifting colour blobs (transform only), warm finale light ===== -->
+  <!-- ===== Background: gradient layers, drifting colour blobs (transform only), warm finale light,
+       and the white sheet that covers all of them on the landing ===== -->
   <div class="bg" aria-hidden="true">
     <div class="bg-layer bg-cool"></div>
     <div class="bg-layer bg-warm"></div>
@@ -28,6 +32,7 @@
     <div class="blob blob-2"></div>
     <div class="blob blob-3"></div>
     <div class="gold-light"></div>
+    <div class="bg-layer bg-light"></div>
     <div class="pulse" id="pulse"></div>
     <div class="bloom" id="bloom"></div>
   </div>
@@ -61,8 +66,8 @@
           <button id="openBtn" class="btn3d" type="button">
             <span class="btn-depth" aria-hidden="true"></span>
             <span class="btn-face">
-              <span class="btn-icon" aria-hidden="true">💌</span>
-              <span class="btn-label" id="btnLabel">Click or open this</span>
+              <span class="btn-label" id="btnLabel">Click to Start</span>
+              <span class="btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
               <span class="btn-shimmer" aria-hidden="true"></span>
             </span>
           </button>
